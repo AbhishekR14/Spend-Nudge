@@ -15,7 +15,11 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      # packages: '' skips the action's default "sdkmanager tools", which no
+      # longer exists in current cmdline-tools and fails the step.
       - uses: android-actions/setup-android@v3
+        with:
+          packages: ""
 
       - name: Install SDK packages
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
