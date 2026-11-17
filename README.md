@@ -17,7 +17,7 @@ in to GitHub; artifacts are kept for 90 days.)
 | | |
 |---|---|
 | **Latest build** | [Build APK → newest run](https://github.com/AbhishekR14/Spend-Nudge/actions/workflows/build.yml?query=branch%3Aclaude%2Ftest-update-repo-trvo91) |
-| **Last verified build** | [run #4](https://github.com/AbhishekR14/Spend-Nudge/actions/runs/44149012780) · commit `ca765b2` · 17 Nov 2026 · [direct artifact link](https://github.com/AbhishekR14/Spend-Nudge/actions/runs/44149012780/artifacts/14357947495) |
+| **Last verified build** | [run #6](https://github.com/AbhishekR14/Spend-Nudge/actions/runs/44151976025) · commit `db4441d` · 17 Nov 2026 · [direct artifact link](https://github.com/AbhishekR14/Spend-Nudge/actions/runs/44151976025/artifacts/14358972764) |
 
 "Last verified build" is the run where the 20 parser tests and `assembleDebug`
 were both confirmed green.
