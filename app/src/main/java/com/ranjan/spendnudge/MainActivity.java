@@ -3,9 +3,7 @@ package com.ranjan.spendnudge;
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.content.ComponentName;
 import android.content.Intent;
-import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
@@ -97,32 +95,26 @@ public class MainActivity extends Activity {
         screenLabel.setText("A notification tap opens: " + TrackerLauncher.describeTarget(this));
     }
 
-    /** Lets you pick which Spending Tracker screen a notification tap opens. */
+    /** Lets you pick what a notification tap opens in Spending Tracker. */
     private void pickScreen() {
-        List<ActivityInfo> screens = TrackerLauncher.candidates(this);
-        if (screens.isEmpty()) {
-            Toast.makeText(this, "Spending Tracker isn't installed, or it keeps every "
-                    + "screen private, so only its main screen can be opened.",
+        List<TrackerLauncher.Option> options = TrackerLauncher.options(this);
+        if (options.isEmpty()) {
+            Toast.makeText(this, "Spending Tracker isn't installed, or it publishes "
+                    + "nothing another app may open, so only its main screen can be used.",
                     Toast.LENGTH_LONG).show();
             return;
         }
 
-        String[] labels = new String[screens.size() + 1];
+        String[] labels = new String[options.size() + 1];
         labels[0] = "Open the app normally";
-        for (int i = 0; i < screens.size(); i++) {
-            labels[i + 1] = TrackerLauncher.shortName(screens.get(i).name);
+        for (int i = 0; i < options.size(); i++) {
+            labels[i + 1] = options.get(i).label;
         }
 
         new AlertDialog.Builder(this)
-                .setTitle("Which screen should open?")
+                .setTitle("What should a tap open?")
                 .setItems(labels, (d, which) -> {
-                    if (which == 0) {
-                        Prefs.setTrackerScreen(this, null);
-                    } else {
-                        ActivityInfo ai = screens.get(which - 1);
-                        Prefs.setTrackerScreen(this,
-                                new ComponentName(ai.packageName, ai.name).flattenToString());
-                    }
+                    TrackerLauncher.pin(this, which == 0 ? null : options.get(which - 1));
                     refreshStatus();
                 })
                 .show();

@@ -25,6 +25,17 @@ public class TrackerLauncherTest {
     }
 
     @Test
+    public void shortcutLabelsAreRecognised() {
+        // Launcher shortcut labels go through the same check as class names.
+        assertTrue(TrackerLauncher.looksLikeExpenseScreen("Add Expense"));
+        assertTrue(TrackerLauncher.looksLikeExpenseScreen("add_expense"));
+        assertTrue(TrackerLauncher.looksLikeExpenseScreen("New Transaction"));
+        assertFalse(TrackerLauncher.looksLikeExpenseScreen("Add Income"));
+        assertFalse(TrackerLauncher.looksLikeExpenseScreen("add_income"));
+        assertFalse(TrackerLauncher.looksLikeExpenseScreen("Shortcut"));
+    }
+
+    @Test
     public void otherScreensAreNotRecognised() {
         assertFalse(TrackerLauncher.looksLikeExpenseScreen(
                 "com.mhriley.spendingtracker.MainActivity"));

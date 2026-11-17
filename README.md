@@ -47,16 +47,22 @@ both on first open.
 A tap tries to open Spending Tracker's add-an-expense screen directly, then
 falls back to the app's main screen.
 
-Spending Tracker is closed source, so the screen is found at run time: Spend
-Nudge reads the activities the tracker declares and picks an exported one whose
-name looks like an expense form. Android only lets one app open another app's
-screen when that screen is exported, so if the tracker keeps its entry form
-private, the main screen opens instead and there is nothing an app can do about
-it from outside.
+Spending Tracker is closed source and keeps that screen private, so it cannot be
+started by name. What it does publish is its launcher shortcuts, the "Add
+Expense" and "Add Income" entries you get by long pressing its icon. A static
+shortcut declares its intent in the app's own `res/xml/shortcuts.xml`, and any
+app may read another app's resources, so Spend Nudge reads that file and reuses
+the exact intent the launcher would send. Firing the shortcut itself is not an
+option: `LauncherApps.startShortcut` is reserved for the active home screen
+launcher.
 
-The main screen shows which screen a tap will open. **Choose the screen a tap
-opens** lists every screen the tracker allows, so you can pin a different one or
-go back to opening the app normally.
+Two things can still stop it, and both fall back to opening the app normally:
+shortcuts created in code instead of XML leave nothing to read, and an intent
+aimed at a private activity is refused by the system.
+
+The main screen shows what a tap will open. **Choose the screen a tap opens**
+lists the shortcuts found plus every exported screen, so you can pin a different
+one or go back to opening the app normally.
 
 ## Tests
 
