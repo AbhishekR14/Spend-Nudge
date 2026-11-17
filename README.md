@@ -1,97 +1,85 @@
 # Spend Nudge
 
-Bank SMS arrives → notification "₹450 spent, log it?" → tap → amount is copied
-and Spending Tracker opens → paste into Amount.
+A bank SMS arrives, you get a notification that says "₹450 spent", you tap it
+and Spending Tracker opens, ready for you to log it.
 
-- Only listens for incoming SMS (RECEIVE_SMS). Never reads your inbox.
-- Nothing runs in the background; Android wakes the app only when an SMS arrives.
-- No internet permission. Nothing leaves your phone.
+- Listens only for incoming SMS (`RECEIVE_SMS`). It never reads your inbox.
+- Nothing runs in the background. Android wakes the app only when an SMS lands.
+- No internet permission. Nothing leaves the phone.
+- No third-party libraries. Plain Java and the Android framework.
 
-## Download the APK
-
-Every push builds a debug APK in GitHub Actions and attaches it to the run as an
-artifact called **spend-nudge-apk**. Open the run, download that artifact, unzip
-it, and you have `app-debug.apk`. (Downloading an artifact needs you to be signed
-in to GitHub; artifacts are kept for 90 days.)
+## Download
 
 | | |
 |---|---|
-| **Latest build** | [Build APK → newest run](https://github.com/AbhishekR14/Spend-Nudge/actions/workflows/build.yml?query=branch%3Aclaude%2Ftest-update-repo-trvo91) |
-| **Last verified build** | [run #11](https://github.com/AbhishekR14/Spend-Nudge/actions/runs/44157022658) · commit `0bd1e0d` · 17 Nov 2026 · [direct artifact link](https://github.com/AbhishekR14/Spend-Nudge/actions/runs/44157022658/artifacts/14362920315) |
+| **Release APK** | [latest release](https://github.com/AbhishekR14/Spend-Nudge/releases/latest) |
+| **Build of every push** | [Build APK runs](https://github.com/AbhishekR14/Spend-Nudge/actions/workflows/build.yml) → open a run → artifact **spend-nudge-apk** |
 
-"Last verified build" is the run where the 20 parser tests and `assembleDebug`
-were both confirmed green.
+A release APK downloads without a GitHub login. Run artifacts need one, and are
+kept for 90 days. Both are debug-signed, which is all a sideloaded personal app
+needs.
 
-## Build it yourself
+Pushing a `v*` tag builds and publishes a release automatically.
 
-**Option A: GitHub (no laptop setup needed)**
-Push any change, or open the **Actions** tab → **Build APK** → **Run workflow**.
-A run takes about 2 minutes and ends with the APK attached as an artifact.
+## Install on the phone
 
-**Option B: Android Studio**
-Open this folder in Android Studio → Build → Build APK(s). The APK lands in
-`app/build/outputs/apk/debug/app-debug.apk`.
-
-Requires Android SDK 35 and build-tools 35.0.0; Android Studio offers to install
-both on first open.
-
-## Install on the Pixel
-1. Open `app-debug.apk` on the phone and allow "Install unknown apps" when asked.
-2. Open Spend Nudge → **Grant permissions**.
-3. If the SMS permission is blocked/greyed out: tap **Open app info** → ⋮ (top right)
-   → **Allow restricted settings** → back → Grant permissions again.
+1. Open the APK and allow installing unknown apps when asked.
+2. Open Spend Nudge and tap **Grant permissions**.
+3. If the SMS permission is greyed out, tap **Open app info**, then the three
+   dot menu, then **Allow restricted settings**, and grant it again. Android
+   blocks SMS permissions for sideloaded apps until you do this.
 4. Paste one of your real bank SMS into the test box and tap **Test**.
 
-## Which screen the notification opens
+## What a tap opens, and why it is the main screen
 
-**On this phone it opens the main screen, and that is as far as any app can
-get.** Spending Tracker's "Add Expense" shortcut points at
-`com.mhriley.spendingtracker.TransactionActivity`, carrying
+Spending Tracker's "Add Expense" shortcut points at
+`com.mhriley.spendingtracker.TransactionActivity` carrying
 `transaction_type=expense`, and that activity is not exported. Android lets only
-Spending Tracker itself start it. So a tap opens the app with the amount already
-on the clipboard, and the expense form is one tap away on **+ Expense**.
+Spending Tracker itself start it. No third-party app can open that form, so a
+tap opens the app's main screen and the expense form is one tap away on
+**+ Expense**.
 
-The app shows no "copied" message of its own on Android 13 and up, because the
-system already confirms the copy there and a second message sits right on top of
-the **+ Expense** button.
+The app still looks for a way in, because it costs nothing and would work the
+moment the tracker exported that screen, or with another tracker that does:
 
-The detection below stays because it costs nothing and would work the moment the
-tracker exported that screen, or on any other tracker that does.
+- It reads the tracker's launcher shortcuts out of its own
+  `res/xml/shortcuts.xml` and reuses the exact intent the launcher would send,
+  extras included. Firing a shortcut directly is not possible;
+  `LauncherApps.startShortcut` is reserved for the active home screen launcher.
+- A shortcut may declare several intents, so each is tried in turn, nearest the
+  target first, skipping any screen that is not exported.
+- It also offers every exported activity.
 
-A tap tries to open the add-an-expense screen directly, then falls back to the
-app's main screen.
+**Choose what a tap opens** lets you pin any of these, and marks the ones
+Android will not allow. **What Spending Tracker publishes** prints what was
+found, so a wrong guess can be told from a screen that is out of reach.
 
-Spending Tracker is closed source and keeps that screen private, so it cannot be
-started by name. What it does publish is its launcher shortcuts, the "Add
-Expense" and "Add Income" entries you get by long pressing its icon. A static
-shortcut declares its intent in the app's own `res/xml/shortcuts.xml`, and any
-app may read another app's resources, so Spend Nudge reads that file and reuses
-the exact intent the launcher would send. Firing the shortcut itself is not an
-option: `LauncherApps.startShortcut` is reserved for the active home screen
-launcher.
+## Why nothing is copied
 
-A shortcut often declares more than one intent, a parent screen and then the one
-it ends on, so each is tried in turn, nearest the target first. An activity that
-is not exported is refused by the system whoever asks, so those are skipped
-rather than attempted.
+Earlier versions copied the amount to the clipboard. Android 13 and up shows its
+own copy confirmation at the bottom of the screen, directly over the tracker's
+**+ Expense** button, and an app cannot move or suppress it.
 
-Two things can still stop it, and both fall back to opening the app normally:
-shortcuts created in code instead of XML leave nothing to read, and a shortcut
-whose screens are all private cannot be opened from outside at all.
-
-The main screen shows what a tap will open. **Choose the screen a tap opens**
-lists the shortcuts found plus every exported screen, so you can pin a different
-one or go back to opening the app normally. **Show what Spending Tracker
-publishes** prints each shortcut, the screens it names, whether we are allowed
-to open them, and the extras it carries, which is how to tell a wrong guess from
-a screen Android will not let us reach.
+So the amount is not copied. Instead a nudge stays in the notification shade
+after you tap it, so the amount is there to read while you type it in. Swipe it
+away when you are done.
 
 ## Tests
 
-`./gradlew test` runs the parser tests in
-`app/src/test/java/com/ranjan/spendnudge/TxnParserTest.java` on a plain JVM
-(no device needed). They also run in CI before the APK is built.
+`./gradlew test` runs the JVM tests in `app/src/test/java/com/ranjan/spendnudge/`
+with no device needed, and CI runs them before building the APK.
 
-## Your bank's format isn't detected?
-Edit `app/src/main/java/com/ranjan/spendnudge/TxnParser.java` (the only parsing file)
-and rebuild.
+- `TxnParserTest` covers the sample bank SMS, the messages that must be ignored,
+  sender filtering, and amount formatting.
+- `TrackerLauncherTest` covers which names count as an expense screen.
+
+## Your bank's format is not detected?
+
+Edit `app/src/main/java/com/ranjan/spendnudge/TxnParser.java`, the only file that
+parses anything, add a case to `TxnParserTest`, and rebuild.
+
+## Build it yourself
+
+Open the folder in Android Studio and use Build → Build APK(s), or run
+`./gradlew assembleDebug`. Needs JDK 17, Android SDK 35 and build-tools 35.0.0.
+The APK lands in `app/build/outputs/apk/debug/app-debug.apk`.
