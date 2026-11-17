@@ -2,7 +2,10 @@ package com.ranjan.spendnudge;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.ComponentName;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
@@ -11,6 +14,9 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Switch;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import java.util.List;
 
 public class MainActivity extends Activity {
 
@@ -20,6 +26,7 @@ public class MainActivity extends Activity {
     };
 
     private TextView status;
+    private TextView screenLabel;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,6 +41,9 @@ public class MainActivity extends Activity {
 
         findViewById(R.id.appInfo).setOnClickListener(v -> openAppInfo());
 
+        screenLabel = findViewById(R.id.screenLabel);
+        findViewById(R.id.pickScreen).setOnClickListener(v -> pickScreen());
+
         Switch credits = findViewById(R.id.credits);
         credits.setChecked(Prefs.notifyCredits(this));
         credits.setOnCheckedChangeListener((b, on) -> Prefs.setNotifyCredits(this, on));
@@ -46,8 +56,8 @@ public class MainActivity extends Activity {
                 result.setText("✗ Not detected as a transaction.\nIf this is a real payment SMS, its format needs adding to TxnParser.java.");
             } else {
                 result.setText("✓ " + (t.isDebit ? "Spent" : "Received") + " ₹" + t.amountText()
-                        + "\nMerchant: " + (t.merchant == null ? "—" : t.merchant)
-                        + "\nAccount: " + (t.account == null ? "—" : "••" + t.account)
+                        + "\nMerchant: " + (t.merchant == null ? "-" : t.merchant)
+                        + "\nAccount: " + (t.account == null ? "-" : "••" + t.account)
                         + "\n\nA test notification was sent.");
                 Notifier.show(this, t);
             }
@@ -74,7 +84,7 @@ public class MainActivity extends Activity {
         boolean sms = has(Manifest.permission.RECEIVE_SMS);
         boolean notif = has(Manifest.permission.POST_NOTIFICATIONS);
         boolean tracker = getPackageManager()
-                .getLaunchIntentForPackage(LogActivity.TRACKER_PACKAGE) != null;
+                .getLaunchIntentForPackage(TrackerLauncher.PACKAGE) != null;
 
         status.setText((sms ? "✓" : "✗") + " Receive SMS\n"
                 + (notif ? "✓" : "✗") + " Notifications\n"
@@ -83,6 +93,39 @@ public class MainActivity extends Activity {
                                 : "Tap Grant permissions. If the SMS option is greyed out, "
                                   + "open app info → ⋮ → Allow restricted settings, then try again."));
         findViewById(R.id.grant).setEnabled(!(sms && notif));
+
+        screenLabel.setText("A notification tap opens: " + TrackerLauncher.describeTarget(this));
+    }
+
+    /** Lets you pick which Spending Tracker screen a notification tap opens. */
+    private void pickScreen() {
+        List<ActivityInfo> screens = TrackerLauncher.candidates(this);
+        if (screens.isEmpty()) {
+            Toast.makeText(this, "Spending Tracker isn't installed, or it keeps every "
+                    + "screen private, so only its main screen can be opened.",
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        String[] labels = new String[screens.size() + 1];
+        labels[0] = "Open the app normally";
+        for (int i = 0; i < screens.size(); i++) {
+            labels[i + 1] = TrackerLauncher.shortName(screens.get(i).name);
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle("Which screen should open?")
+                .setItems(labels, (d, which) -> {
+                    if (which == 0) {
+                        Prefs.setTrackerScreen(this, null);
+                    } else {
+                        ActivityInfo ai = screens.get(which - 1);
+                        Prefs.setTrackerScreen(this,
+                                new ComponentName(ai.packageName, ai.name).flattenToString());
+                    }
+                    refreshStatus();
+                })
+                .show();
     }
 
     private void openAppInfo() {

@@ -34,8 +34,8 @@ public final class Notifier {
         String amt = "₹" + txn.amountText();
 
         String title = txn.isDebit
-                ? amt + " spent — log it?"
-                : amt + " received — log as income?";
+                ? amt + " spent, log it?"
+                : amt + " received, log as income?";
 
         StringBuilder text = new StringBuilder();
         if (txn.merchant != null) text.append(txn.isDebit ? "To " : "From ").append(txn.merchant);

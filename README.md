@@ -1,6 +1,6 @@
 # Spend Nudge
 
-Bank SMS arrives → notification "₹450 spent — log it?" → tap → amount is copied
+Bank SMS arrives → notification "₹450 spent, log it?" → tap → amount is copied
 and Spending Tracker opens → paste into Amount.
 
 - Only listens for incoming SMS (RECEIVE_SMS). Never reads your inbox.
@@ -41,6 +41,22 @@ both on first open.
 3. If the SMS permission is blocked/greyed out: tap **Open app info** → ⋮ (top right)
    → **Allow restricted settings** → back → Grant permissions again.
 4. Paste one of your real bank SMS into the test box and tap **Test**.
+
+## Which screen the notification opens
+
+A tap tries to open Spending Tracker's add-an-expense screen directly, then
+falls back to the app's main screen.
+
+Spending Tracker is closed source, so the screen is found at run time: Spend
+Nudge reads the activities the tracker declares and picks an exported one whose
+name looks like an expense form. Android only lets one app open another app's
+screen when that screen is exported, so if the tracker keeps its entry form
+private, the main screen opens instead and there is nothing an app can do about
+it from outside.
+
+The main screen shows which screen a tap will open. **Choose the screen a tap
+opens** lists every screen the tracker allows, so you can pin a different one or
+go back to opening the app normally.
 
 ## Tests
 
