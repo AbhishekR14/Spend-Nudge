@@ -65,6 +65,12 @@
             android:layout_height="wrap_content"
             android:text="Choose the screen a tap opens" />
 
+        <Button
+            android:id="@+id/showDetails"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Show what Spending Tracker publishes" />
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

@@ -56,13 +56,21 @@ the exact intent the launcher would send. Firing the shortcut itself is not an
 option: `LauncherApps.startShortcut` is reserved for the active home screen
 launcher.
 
+A shortcut often declares more than one intent, a parent screen and then the one
+it ends on, so each is tried in turn, nearest the target first. An activity that
+is not exported is refused by the system whoever asks, so those are skipped
+rather than attempted.
+
 Two things can still stop it, and both fall back to opening the app normally:
-shortcuts created in code instead of XML leave nothing to read, and an intent
-aimed at a private activity is refused by the system.
+shortcuts created in code instead of XML leave nothing to read, and a shortcut
+whose screens are all private cannot be opened from outside at all.
 
 The main screen shows what a tap will open. **Choose the screen a tap opens**
 lists the shortcuts found plus every exported screen, so you can pin a different
-one or go back to opening the app normally.
+one or go back to opening the app normally. **Show what Spending Tracker
+publishes** prints each shortcut, the screens it names, whether we are allowed
+to open them, and the extras it carries, which is how to tell a wrong guess from
+a screen Android will not let us reach.
 
 ## Tests
 

@@ -41,6 +41,7 @@ public class MainActivity extends Activity {
 
         screenLabel = findViewById(R.id.screenLabel);
         findViewById(R.id.pickScreen).setOnClickListener(v -> pickScreen());
+        findViewById(R.id.showDetails).setOnClickListener(v -> showDetails());
 
         Switch credits = findViewById(R.id.credits);
         credits.setChecked(Prefs.notifyCredits(this));
@@ -117,6 +118,15 @@ public class MainActivity extends Activity {
                     TrackerLauncher.pin(this, which == 0 ? null : options.get(which - 1));
                     refreshStatus();
                 })
+                .show();
+    }
+
+    /** Shows what Spending Tracker publishes and which parts we may open. */
+    private void showDetails() {
+        new AlertDialog.Builder(this)
+                .setTitle("What Spending Tracker publishes")
+                .setMessage(TrackerLauncher.report(this))
+                .setPositiveButton("Close", null)
                 .show();
     }
 

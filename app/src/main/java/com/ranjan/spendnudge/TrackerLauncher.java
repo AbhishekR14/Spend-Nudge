@@ -16,6 +16,7 @@ import org.xmlpull.v1.XmlPullParser;
 
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
@@ -50,16 +51,44 @@ final class TrackerLauncher {
 
     private TrackerLauncher() {}
 
-    /** Something a notification tap could open. */
+    /**
+     * Something a notification tap could open. A shortcut may declare several
+     * intents, a parent screen and then the one you actually want, so they are
+     * kept in order of preference: the screen the shortcut ends on comes first.
+     */
     static final class Option {
         final String label;
-        final Intent intent;
+        final List<Intent> intents;
         final boolean expenseForm;
 
-        Option(String label, Intent intent, boolean expenseForm) {
+        Option(String label, List<Intent> intents, boolean expenseForm) {
             this.label = label;
-            this.intent = intent;
+            this.intents = intents;
             this.expenseForm = expenseForm;
+        }
+
+        /** The first of its intents this app is actually allowed to start. */
+        Intent startable(Context ctx) {
+            for (Intent i : intents) {
+                if (canStart(ctx, i)) return i;
+            }
+            return null;
+        }
+    }
+
+    /**
+     * Whether Android would let us start this intent. An activity that is not
+     * exported is refused outright, whoever asks, so there is no point trying.
+     */
+    static boolean canStart(Context ctx, Intent intent) {
+        PackageManager pm = ctx.getPackageManager();
+        ComponentName cn = intent.getComponent();
+        if (cn == null) return intent.resolveActivity(pm) != null;
+        try {
+            ActivityInfo ai = pm.getActivityInfo(cn, 0);
+            return ai.exported && ai.enabled;
+        } catch (PackageManager.NameNotFoundException e) {
+            return false;
         }
     }
 
@@ -132,12 +161,12 @@ final class TrackerLauncher {
         }
     }
 
-    /** Reads res/xml/shortcuts.xml and turns each shortcut back into its intent. */
+    /** Reads res/xml/shortcuts.xml and turns each shortcut back into its intents. */
     private static void readShortcuts(Resources res, XmlResourceParser parser, List<Option> out)
             throws Exception {
         String label = null;
         boolean enabled = true;
-        Intent intent = null;
+        List<Intent> intents = new ArrayList<>();
 
         for (int event = parser.next(); event != XmlPullParser.END_DOCUMENT; event = parser.next()) {
             String tag = parser.getName();
@@ -147,19 +176,20 @@ final class TrackerLauncher {
                 if ("shortcut".equals(tag)) {
                     label = shortcutLabel(res, parser);
                     enabled = parser.getAttributeBooleanValue(ANDROID_NS, "enabled", true);
-                    intent = null;
+                    intents = new ArrayList<>();
                 } else if ("intent".equals(tag)) {
-                    // A shortcut may list several; the last one is what it opens.
-                    intent = readIntent(parser);
-                } else if ("extra".equals(tag) && intent != null) {
-                    readExtra(intent, parser);
+                    intents.add(readIntent(parser));
+                } else if ("extra".equals(tag) && !intents.isEmpty()) {
+                    readExtra(intents.get(intents.size() - 1), parser);
                 }
             } else if (event == XmlPullParser.END_TAG && "shortcut".equals(tag)) {
-                if (enabled && intent != null && label != null) {
-                    out.add(new Option(label, intent, looksLikeExpenseScreen(label)));
+                if (enabled && label != null && !intents.isEmpty()) {
+                    // The last intent is the screen the shortcut ends on, so try it first.
+                    Collections.reverse(intents);
+                    out.add(new Option(label, intents, looksLikeExpenseScreen(label)));
                 }
                 label = null;
-                intent = null;
+                intents = new ArrayList<>();
             }
         }
     }
@@ -237,18 +267,53 @@ final class TrackerLauncher {
             if (!ai.exported || !ai.enabled) continue;
             Intent intent = new Intent(Intent.ACTION_MAIN)
                     .setComponent(new ComponentName(ai.packageName, ai.name));
-            out.add(new Option(shortName(ai.name), intent, looksLikeExpenseScreen(ai.name)));
+            out.add(new Option(shortName(ai.name),
+                    Collections.singletonList(intent), looksLikeExpenseScreen(ai.name)));
         }
     }
 
     // --- What a tap actually opens ------------------------------------------
 
-    /** The option detected automatically, or null when nothing looks right. */
+    /** The option detected automatically: an expense form we may actually start. */
     private static Option detected(Context ctx) {
         for (Option o : options(ctx)) {
-            if (o.expenseForm) return o;
+            if (o.expenseForm && o.startable(ctx) != null) return o;
         }
         return null;
+    }
+
+    /**
+     * What the tracker publishes and what we may do with it. Shown on the main
+     * screen so a tap that lands on the wrong page can be explained rather than
+     * guessed at.
+     */
+    static String report(Context ctx) {
+        List<Option> options = options(ctx);
+        if (options.isEmpty()) {
+            return "Spending Tracker isn't installed, or it publishes nothing readable.";
+        }
+
+        StringBuilder sb = new StringBuilder();
+        for (Option o : options) {
+            sb.append(o.label).append(o.expenseForm ? "  (looks like an expense form)" : "")
+                    .append('\n');
+            for (Intent i : o.intents) {
+                ComponentName cn = i.getComponent();
+                sb.append("   screen: ")
+                        .append(cn == null ? "any in " + i.getPackage() : shortName(cn.getClassName()))
+                        .append(canStart(ctx, i) ? "  [can open]" : "  [private, cannot open]")
+                        .append("\n   action: ").append(i.getAction()).append('\n');
+                Bundle extras = i.getExtras();
+                if (extras != null) {
+                    for (String key : extras.keySet()) {
+                        sb.append("   extra: ").append(key).append(" = ")
+                                .append(extras.get(key)).append('\n');
+                    }
+                }
+            }
+            sb.append('\n');
+        }
+        return sb.toString().trim();
     }
 
     private static Intent pinnedIntent(Context ctx) {
@@ -266,10 +331,11 @@ final class TrackerLauncher {
     static void pin(Context ctx, Option option) {
         if (option == null) {
             Prefs.setTrackerScreen(ctx, null, null);
-        } else {
-            Prefs.setTrackerScreen(ctx,
-                    option.intent.toUri(Intent.URI_INTENT_SCHEME), option.label);
+            return;
         }
+        Intent intent = option.startable(ctx);
+        if (intent == null) intent = option.intents.get(0);
+        Prefs.setTrackerScreen(ctx, intent.toUri(Intent.URI_INTENT_SCHEME), option.label);
     }
 
     /** What MainActivity shows you. */
@@ -287,7 +353,7 @@ final class TrackerLauncher {
         Intent target = pinnedIntent(ctx);
         if (target == null) {
             Option auto = detected(ctx);
-            if (auto != null) target = auto.intent;
+            if (auto != null) target = auto.startable(ctx);
         }
         if (target != null && start(ctx, target)) return;
 
@@ -301,7 +367,11 @@ final class TrackerLauncher {
 
     private static boolean start(Context ctx, Intent intent) {
         try {
-            ctx.startActivity(new Intent(intent).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            // CLEAR_TOP and SINGLE_TOP matter: when the tracker is already in the
+            // background, NEW_TASK alone just brings its old task forward and the
+            // extras that pick the screen are never delivered.
+            ctx.startActivity(new Intent(intent).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                    | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP));
             return true;
         } catch (ActivityNotFoundException | SecurityException e) {
             return false; // Private or missing screen: the caller falls back.
