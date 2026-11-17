@@ -7,16 +7,33 @@ and Spending Tracker opens → paste into Amount.
 - Nothing runs in the background; Android wakes the app only when an SMS arrives.
 - No internet permission. Nothing leaves your phone.
 
-## Build
+## Download the APK
+
+Every push builds a debug APK in GitHub Actions and attaches it to the run as an
+artifact called **spend-nudge-apk**. Open the run, download that artifact, unzip
+it, and you have `app-debug.apk`. (Downloading an artifact needs you to be signed
+in to GitHub; artifacts are kept for 90 days.)
+
+| | |
+|---|---|
+| **Latest build** | [Build APK → newest run](https://github.com/AbhishekR14/Spend-Nudge/actions/workflows/build.yml?query=branch%3Aclaude%2Ftest-update-repo-trvo91) |
+| **Last verified build** | [run #2](https://github.com/AbhishekR14/Spend-Nudge/actions/runs/44143645599) · commit `92d62c0` · 17 Nov 2026 · [direct artifact link](https://github.com/AbhishekR14/Spend-Nudge/actions/runs/44143645599/artifacts/14356455452) |
+
+"Last verified build" is the run where the 20 parser tests and `assembleDebug`
+were both confirmed green.
+
+## Build it yourself
 
 **Option A: GitHub (no laptop setup needed)**
-1. Create a new private repo on github.com and upload everything in this folder
-   (keep the `.github` folder — it contains the build script).
-2. Open the repo's **Actions** tab. The "Build APK" run starts automatically (~4 min).
-3. Open the finished run → download **spend-nudge-apk** → unzip → `app-debug.apk`.
+Push any change, or open the **Actions** tab → **Build APK** → **Run workflow**.
+A run takes about 2 minutes and ends with the APK attached as an artifact.
 
 **Option B: Android Studio**
-Open this folder in Android Studio → Build → Build APK(s).
+Open this folder in Android Studio → Build → Build APK(s). The APK lands in
+`app/build/outputs/apk/debug/app-debug.apk`.
+
+Requires Android SDK 35 and build-tools 35.0.0; Android Studio offers to install
+both on first open.
 
 ## Install on the Pixel
 1. Open `app-debug.apk` on the phone and allow "Install unknown apps" when asked.
