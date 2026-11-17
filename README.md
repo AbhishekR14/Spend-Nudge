@@ -51,6 +51,10 @@ get.** Spending Tracker's "Add Expense" shortcut points at
 Spending Tracker itself start it. So a tap opens the app with the amount already
 on the clipboard, and the expense form is one tap away on **+ Expense**.
 
+The app shows no "copied" message of its own on Android 13 and up, because the
+system already confirms the copy there and a second message sits right on top of
+the **+ Expense** button.
+
 The detection below stays because it costs nothing and would work the moment the
 tracker exported that screen, or on any other tracker that does.
 

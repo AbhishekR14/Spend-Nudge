@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.NotificationManager;
 import android.content.ClipData;
 import android.content.ClipboardManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.widget.Toast;
 
@@ -21,8 +22,13 @@ public class LogActivity extends Activity {
         if (amount != null) {
             ClipboardManager cm = getSystemService(ClipboardManager.class);
             cm.setPrimaryClip(ClipData.newPlainText("amount", amount));
-            Toast.makeText(this, "₹" + amount + " copied, paste it in Amount",
-                    Toast.LENGTH_SHORT).show();
+
+            // Android 13 and up confirms a copy itself, so a toast on top of that
+            // only duplicates it and sits over Spending Tracker's + Expense button.
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                Toast.makeText(this, "₹" + amount + " copied, paste it in Amount",
+                        Toast.LENGTH_SHORT).show();
+            }
         }
 
         TrackerLauncher.open(this);
