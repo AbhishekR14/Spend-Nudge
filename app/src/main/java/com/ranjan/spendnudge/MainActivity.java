@@ -109,13 +109,21 @@ public class MainActivity extends Activity {
         String[] labels = new String[options.size() + 1];
         labels[0] = "Open the app normally";
         for (int i = 0; i < options.size(); i++) {
-            labels[i + 1] = options.get(i).label;
+            TrackerLauncher.Option o = options.get(i);
+            // Say up front which ones Android will not let this app open.
+            labels[i + 1] = o.startable(this) == null ? o.label + "  (cannot open)" : o.label;
         }
 
         new AlertDialog.Builder(this)
                 .setTitle("What should a tap open?")
                 .setItems(labels, (d, which) -> {
-                    TrackerLauncher.pin(this, which == 0 ? null : options.get(which - 1));
+                    TrackerLauncher.Option chosen = which == 0 ? null : options.get(which - 1);
+                    if (!TrackerLauncher.pin(this, chosen)) {
+                        Toast.makeText(this, chosen.label + " points at a screen Spending "
+                                + "Tracker keeps private. Only that app can open it.",
+                                Toast.LENGTH_LONG).show();
+                        return;
+                    }
                     refreshStatus();
                 })
                 .show();

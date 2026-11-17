@@ -313,6 +313,16 @@ final class TrackerLauncher {
             }
             sb.append('\n');
         }
+
+        for (Option o : options) {
+            if (o.expenseForm && o.startable(ctx) == null) {
+                sb.append("\n").append(o.label).append(" points at a screen Spending Tracker ")
+                        .append("keeps private. Android lets only that app open it, so a tap ")
+                        .append("opens its main screen and the amount is on the clipboard, ")
+                        .append("ready to paste.");
+                break;
+            }
+        }
         return sb.toString().trim();
     }
 
@@ -327,15 +337,20 @@ final class TrackerLauncher {
         }
     }
 
-    /** Remembers your choice from the picker. Pass null to go back to automatic. */
-    static void pin(Context ctx, Option option) {
+    /**
+     * Remembers your choice from the picker. Pass null to go back to automatic.
+     * Returns false for an option Android would never let us open, so the
+     * caller can say why instead of pinning something that cannot work.
+     */
+    static boolean pin(Context ctx, Option option) {
         if (option == null) {
             Prefs.setTrackerScreen(ctx, null, null);
-            return;
+            return true;
         }
         Intent intent = option.startable(ctx);
-        if (intent == null) intent = option.intents.get(0);
+        if (intent == null) return false;
         Prefs.setTrackerScreen(ctx, intent.toUri(Intent.URI_INTENT_SCHEME), option.label);
+        return true;
     }
 
     /** What MainActivity shows you. */
@@ -355,23 +370,28 @@ final class TrackerLauncher {
             Option auto = detected(ctx);
             if (auto != null) target = auto.startable(ctx);
         }
-        if (target != null && start(ctx, target)) return;
+        // CLEAR_TOP and SINGLE_TOP matter only here: with NEW_TASK alone, a
+        // tracker that is already running just comes to the front and never
+        // receives the extras that choose the screen.
+        if (target != null && start(ctx, target, Intent.FLAG_ACTIVITY_CLEAR_TOP
+                | Intent.FLAG_ACTIVITY_SINGLE_TOP)) {
+            return;
+        }
 
         Intent launch = ctx.getPackageManager().getLaunchIntentForPackage(PACKAGE);
         if (launch == null) {
             launch = new Intent(Intent.ACTION_VIEW, Uri.parse(
                     "https://play.google.com/store/apps/details?id=" + PACKAGE));
         }
-        start(ctx, launch);
+        // No extra flags: this is the plain "open the app" route that tapping
+        // its icon takes, and it must not throw away what you were doing in it.
+        start(ctx, launch, 0);
     }
 
-    private static boolean start(Context ctx, Intent intent) {
+    private static boolean start(Context ctx, Intent intent, int extraFlags) {
         try {
-            // CLEAR_TOP and SINGLE_TOP matter: when the tracker is already in the
-            // background, NEW_TASK alone just brings its old task forward and the
-            // extras that pick the screen are never delivered.
-            ctx.startActivity(new Intent(intent).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
-                    | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP));
+            ctx.startActivity(new Intent(intent)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | extraFlags));
             return true;
         } catch (ActivityNotFoundException | SecurityException e) {
             return false; // Private or missing screen: the caller falls back.

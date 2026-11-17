@@ -44,8 +44,18 @@ both on first open.
 
 ## Which screen the notification opens
 
-A tap tries to open Spending Tracker's add-an-expense screen directly, then
-falls back to the app's main screen.
+**On this phone it opens the main screen, and that is as far as any app can
+get.** Spending Tracker's "Add Expense" shortcut points at
+`com.mhriley.spendingtracker.TransactionActivity`, carrying
+`transaction_type=expense`, and that activity is not exported. Android lets only
+Spending Tracker itself start it. So a tap opens the app with the amount already
+on the clipboard, and the expense form is one tap away on **+ Expense**.
+
+The detection below stays because it costs nothing and would work the moment the
+tracker exported that screen, or on any other tracker that does.
+
+A tap tries to open the add-an-expense screen directly, then falls back to the
+app's main screen.
 
 Spending Tracker is closed source and keeps that screen private, so it cannot be
 started by name. What it does publish is its launcher shortcuts, the "Add
