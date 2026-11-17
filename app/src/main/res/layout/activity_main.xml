@@ -2,104 +2,189 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/bg"
+    android:fillViewport="true"
+    android:scrollbars="none"
     android:fitsSystemWindows="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="20dp">
+        android:paddingStart="18dp"
+        android:paddingEnd="18dp"
+        android:paddingTop="26dp"
+        android:paddingBottom="28dp">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Spend Nudge"
-            android:textSize="26sp"
+            android:text="@string/app_name"
+            android:textColor="@color/text"
+            android:textSize="30sp"
             android:textStyle="bold" />
 
         <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:text="Notifies you when a bank SMS arrives. Tap the notification to copy the amount and open Spending Tracker."
-            android:textSize="14sp" />
-
-        <TextView
-            android:id="@+id/status"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:textSize="16sp" />
-
-        <Button
-            android:id="@+id/grant"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Grant permissions" />
-
-        <Button
-            android:id="@+id/appInfo"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Open app info (for restricted settings)" />
-
-        <Switch
-            android:id="@+id/credits"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="Also notify for money received"
-            android:textSize="16sp" />
-
-        <TextView
-            android:id="@+id/screenLabel"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            style="@style/Body"
+            android:layout_marginTop="5dp"
+            android:layout_marginBottom="22dp"
+            android:text="@string/tagline"
             android:textSize="15sp" />
 
-        <Button
-            android:id="@+id/pickScreen"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Choose the screen a tap opens" />
+        <!-- Setup -->
+        <LinearLayout style="@style/Card">
 
-        <Button
-            android:id="@+id/showDetails"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Show what Spending Tracker publishes" />
+            <TextView
+                style="@style/SectionTitle"
+                android:text="@string/section_setup" />
+
+            <LinearLayout style="@style/StatusRow">
+                <ImageView
+                    android:id="@+id/icSms"
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:contentDescription="@string/perm_sms"
+                    android:src="@drawable/ic_check" />
+
+                <TextView
+                    style="@style/StatusLabel"
+                    android:text="@string/perm_sms" />
+            </LinearLayout>
+
+            <LinearLayout style="@style/StatusRow">
+                <ImageView
+                    android:id="@+id/icNotif"
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:contentDescription="@string/perm_notifications"
+                    android:src="@drawable/ic_check" />
+
+                <TextView
+                    style="@style/StatusLabel"
+                    android:text="@string/perm_notifications" />
+            </LinearLayout>
+
+            <LinearLayout style="@style/StatusRow">
+                <ImageView
+                    android:id="@+id/icTracker"
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:contentDescription="@string/tracker_installed"
+                    android:src="@drawable/ic_check" />
+
+                <TextView
+                    style="@style/StatusLabel"
+                    android:text="@string/tracker_installed" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/hint"
+                style="@style/Body"
+                android:layout_marginTop="12dp" />
+
+            <Button
+                android:id="@+id/grant"
+                style="@style/PrimaryButton"
+                android:layout_marginTop="16dp"
+                android:text="@string/grant" />
+
+            <Button
+                android:id="@+id/appInfo"
+                style="@style/SecondaryButton"
+                android:text="@string/app_info" />
+        </LinearLayout>
+
+        <!-- Nudges -->
+        <LinearLayout style="@style/Card">
+
+            <TextView
+                style="@style/SectionTitle"
+                android:text="@string/section_nudges" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:paddingEnd="12dp"
+                    android:paddingStart="0dp"
+                    android:text="@string/notify_credits"
+                    android:textColor="@color/text"
+                    android:textSize="16sp" />
+
+                <Switch
+                    android:id="@+id/credits"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
+
+            <View style="@style/Divider" />
+
+            <TextView
+                android:id="@+id/screenLabel"
+                style="@style/Body" />
+
+            <Button
+                android:id="@+id/pickScreen"
+                style="@style/SecondaryButton"
+                android:layout_marginTop="12dp"
+                android:text="@string/pick_screen" />
+
+            <Button
+                android:id="@+id/showDetails"
+                style="@style/SecondaryButton"
+                android:text="@string/show_details" />
+        </LinearLayout>
+
+        <!-- Parser tester -->
+        <LinearLayout style="@style/Card">
+
+            <TextView
+                style="@style/SectionTitle"
+                android:text="@string/section_test" />
+
+            <TextView
+                style="@style/Body"
+                android:text="@string/test_blurb" />
+
+            <EditText
+                android:id="@+id/testInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_input"
+                android:gravity="top"
+                android:hint="@string/test_hint"
+                android:inputType="textMultiLine"
+                android:minLines="4"
+                android:padding="14dp"
+                android:textColor="@color/text"
+                android:textSize="15sp" />
+
+            <Button
+                android:id="@+id/testBtn"
+                style="@style/PrimaryButton"
+                android:layout_marginTop="12dp"
+                android:text="@string/test" />
+
+            <TextView
+                android:id="@+id/testResult"
+                style="@style/Body"
+                android:layout_marginTop="14dp"
+                android:textSize="15sp"
+                android:visibility="gone" />
+        </LinearLayout>
 
         <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="28dp"
-            android:text="Test with a real bank SMS"
-            android:textSize="18sp"
-            android:textStyle="bold" />
-
-        <EditText
-            android:id="@+id/testInput"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:id="@+id/version"
+            style="@style/Body"
             android:layout_marginTop="6dp"
-            android:gravity="top"
-            android:hint="Paste a bank SMS here"
-            android:inputType="textMultiLine"
-            android:minLines="4" />
-
-        <Button
-            android:id="@+id/testBtn"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Test" />
-
-        <TextView
-            android:id="@+id/testResult"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:textSize="15sp" />
+            android:gravity="center"
+            android:textSize="13sp" />
     </LinearLayout>
 </ScrollView>

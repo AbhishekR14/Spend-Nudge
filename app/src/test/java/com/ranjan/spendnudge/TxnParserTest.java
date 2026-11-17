@@ -167,4 +167,21 @@ public class TxnParserTest {
     public void rupeeSymbolIsAccepted() {
         assertEquals("99", parsed("AX-HDFCBK", "₹99 debited at SWIGGY").amountText());
     }
+
+    // --- Amount as shown to you --------------------------------------------
+
+    @Test
+    public void displayedAmountsAreGrouped() {
+        assertEquals("450", parsed("AX-HDFCBK", "Rs.450.00 spent at SWIGGY").amountDisplay());
+        assertEquals("85,000", parsed("AX-HDFCBK", "Rs.85,000 spent at X").amountDisplay());
+        assertEquals("2,263.10", parsed("AX-HDFCBK", "INR 2263.10 spent at X").amountDisplay());
+    }
+
+    @Test
+    public void displayedAndPlainAmountsAgreeOnValue() {
+        // amountText stays plain: anything matching on it must not see separators.
+        TxnParser.Txn t = parsed("AX-HDFCBK", "Rs.1,299.00 spent at AMAZON");
+        assertEquals("1299", t.amountText());
+        assertEquals("1,299", t.amountDisplay());
+    }
 }

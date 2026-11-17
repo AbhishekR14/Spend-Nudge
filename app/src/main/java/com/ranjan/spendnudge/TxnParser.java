@@ -1,5 +1,6 @@
 package com.ranjan.spendnudge;
 
+import java.text.NumberFormat;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -26,9 +27,19 @@ public final class TxnParser {
             this.account = account;
         }
 
+        /** Plain digits, for anything that has to match exactly. */
         public String amountText() {
             if (amount == Math.rint(amount)) return String.format(Locale.US, "%.0f", amount);
             return String.format(Locale.US, "%.2f", amount);
+        }
+
+        /** Grouped for reading, Indian style: 85,000 and 1,00,000. */
+        public String amountDisplay() {
+            boolean whole = amount == Math.rint(amount);
+            NumberFormat f = NumberFormat.getNumberInstance(new Locale("en", "IN"));
+            f.setMinimumFractionDigits(whole ? 0 : 2);
+            f.setMaximumFractionDigits(whole ? 0 : 2);
+            return f.format(amount);
         }
 
         @Override public String toString() {

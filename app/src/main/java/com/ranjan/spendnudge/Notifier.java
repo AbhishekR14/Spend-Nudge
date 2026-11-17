@@ -12,8 +12,6 @@ import android.content.pm.PackageManager;
 public final class Notifier {
 
     static final String CHANNEL_ID = "transactions";
-    static final String EXTRA_AMOUNT = "amount";
-    static final String EXTRA_NOTIF_ID = "notif_id";
 
     private Notifier() {}
 
@@ -31,11 +29,8 @@ public final class Notifier {
         ensureChannel(ctx);
 
         int id = (int) (System.currentTimeMillis() & 0x7fffffff);
-        String amt = "₹" + txn.amountText();
-
-        String title = txn.isDebit
-                ? amt + " spent, log it?"
-                : amt + " received, log as income?";
+        String amount = "₹" + txn.amountDisplay();
+        String title = amount + (txn.isDebit ? " spent" : " received");
 
         StringBuilder text = new StringBuilder();
         if (txn.merchant != null) text.append(txn.isDebit ? "To " : "From ").append(txn.merchant);
@@ -43,23 +38,25 @@ public final class Notifier {
             if (text.length() > 0) text.append(" · ");
             text.append("A/c ••").append(txn.account);
         }
-        if (text.length() == 0) text.append("Tap to open Spending Tracker");
+        if (text.length() > 0) text.append("\n");
+        text.append("Tap to open Spending Tracker");
 
-        Intent open = new Intent(ctx, LogActivity.class)
-                .putExtra(EXTRA_AMOUNT, txn.amountText())
-                .putExtra(EXTRA_NOTIF_ID, id)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        Intent open = new Intent(ctx, LogActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         PendingIntent pi = PendingIntent.getActivity(ctx, id, open,
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
 
         Notification n = new Notification.Builder(ctx, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_notify)
                 .setContentTitle(title)
-                .setContentText(text)
+                .setContentText(text.toString())
+                .setStyle(new Notification.BigTextStyle().bigText(text.toString()))
                 .setContentIntent(pi)
                 .addAction(new Notification.Action.Builder(null, "Log it", pi).build())
-                .setAutoCancel(true)
+                // Nothing is copied any more, so the amount has to stay readable
+                // while you type it into the tracker. You dismiss it yourself.
+                .setAutoCancel(false)
                 .setCategory(Notification.CATEGORY_REMINDER)
+                .setShowWhen(true)
                 .build();
 
         ctx.getSystemService(NotificationManager.class).notify(id, n);

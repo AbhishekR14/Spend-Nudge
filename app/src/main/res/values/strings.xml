@@ -1,4 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Spend Nudge</string>
+    <string name="tagline">A bank SMS arrives, you get a nudge to log it.</string>
+
+    <string name="section_setup">Setup</string>
+    <string name="perm_sms">Receive SMS</string>
+    <string name="perm_notifications">Notifications</string>
+    <string name="tracker_installed">Spending Tracker installed</string>
+    <string name="hint_ready">All set. The next bank SMS will nudge you.</string>
+    <string name="hint_grant">Tap Grant permissions. If the SMS option is greyed out, open app info, then the three dot menu, then Allow restricted settings, and try again.</string>
+    <string name="grant">Grant permissions</string>
+    <string name="app_info">Open app info</string>
+
+    <string name="section_nudges">Nudges</string>
+    <string name="notify_credits">Also notify for money received</string>
+    <string name="tap_opens">A notification tap opens %1$s.</string>
+    <string name="pick_screen">Choose what a tap opens</string>
+    <string name="show_details">What Spending Tracker publishes</string>
+    <string name="pick_title">What should a tap open?</string>
+    <string name="pick_normally">Open the app normally</string>
+    <string name="details_title">What Spending Tracker publishes</string>
+    <string name="close">Close</string>
+    <string name="cannot_open_suffix">  (cannot open)</string>
+    <string name="cannot_open">%1$s points at a screen Spending Tracker keeps private. Only that app can open it.</string>
+    <string name="nothing_to_open">Spending Tracker isn\'t installed, or it publishes nothing another app may open.</string>
+
+    <string name="section_test">Test the parser</string>
+    <string name="test_blurb">Paste a real bank SMS to see what Spend Nudge makes of it.</string>
+    <string name="test_hint">Paste a bank SMS here</string>
+    <string name="test">Test</string>
+    <string name="test_miss">Not read as a transaction. If this is a real payment SMS, its wording needs adding to TxnParser.java.</string>
+
+    <string name="version_format">Version %1$s</string>
 </resources>

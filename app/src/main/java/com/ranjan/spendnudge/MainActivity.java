@@ -5,17 +5,20 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.ColorStateList;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
-import android.widget.Button;
+import android.view.View;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.List;
 
+/** Setup, preferences and a box for trying the parser on a real SMS. */
 public class MainActivity extends Activity {
 
     private static final String[] PERMS = {
@@ -23,7 +26,10 @@ public class MainActivity extends Activity {
             Manifest.permission.POST_NOTIFICATIONS
     };
 
-    private TextView status;
+    private ImageView icSms;
+    private ImageView icNotif;
+    private ImageView icTracker;
+    private TextView hint;
     private TextView screenLabel;
 
     @Override
@@ -32,14 +38,14 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
         Notifier.ensureChannel(this);
 
-        status = findViewById(R.id.status);
-
-        Button grant = findViewById(R.id.grant);
-        grant.setOnClickListener(v -> requestPermissions(PERMS, 1));
-
-        findViewById(R.id.appInfo).setOnClickListener(v -> openAppInfo());
-
+        icSms = findViewById(R.id.icSms);
+        icNotif = findViewById(R.id.icNotif);
+        icTracker = findViewById(R.id.icTracker);
+        hint = findViewById(R.id.hint);
         screenLabel = findViewById(R.id.screenLabel);
+
+        findViewById(R.id.grant).setOnClickListener(v -> requestPermissions(PERMS, 1));
+        findViewById(R.id.appInfo).setOnClickListener(v -> openAppInfo());
         findViewById(R.id.pickScreen).setOnClickListener(v -> pickScreen());
         findViewById(R.id.showDetails).setOnClickListener(v -> showDetails());
 
@@ -49,18 +55,10 @@ public class MainActivity extends Activity {
 
         EditText input = findViewById(R.id.testInput);
         TextView result = findViewById(R.id.testResult);
-        findViewById(R.id.testBtn).setOnClickListener(v -> {
-            TxnParser.Txn t = TxnParser.parse(null, input.getText().toString());
-            if (t == null) {
-                result.setText("✗ Not detected as a transaction.\nIf this is a real payment SMS, its format needs adding to TxnParser.java.");
-            } else {
-                result.setText("✓ " + (t.isDebit ? "Spent" : "Received") + " ₹" + t.amountText()
-                        + "\nMerchant: " + (t.merchant == null ? "-" : t.merchant)
-                        + "\nAccount: " + (t.account == null ? "-" : "••" + t.account)
-                        + "\n\nA test notification was sent.");
-                Notifier.show(this, t);
-            }
-        });
+        findViewById(R.id.testBtn).setOnClickListener(v -> runTest(input, result));
+
+        ((TextView) findViewById(R.id.version))
+                .setText(getString(R.string.version_format, versionName()));
     }
 
     @Override
@@ -75,9 +73,7 @@ public class MainActivity extends Activity {
         refreshStatus();
     }
 
-    private boolean has(String p) {
-        return checkSelfPermission(p) == PackageManager.PERMISSION_GRANTED;
-    }
+    // --- Status ------------------------------------------------------------
 
     private void refreshStatus() {
         boolean sms = has(Manifest.permission.RECEIVE_SMS);
@@ -85,42 +81,63 @@ public class MainActivity extends Activity {
         boolean tracker = getPackageManager()
                 .getLaunchIntentForPackage(TrackerLauncher.PACKAGE) != null;
 
-        status.setText((sms ? "✓" : "✗") + " Receive SMS\n"
-                + (notif ? "✓" : "✗") + " Notifications\n"
-                + (tracker ? "✓" : "✗") + " Spending Tracker installed\n\n"
-                + (sms && notif ? "All set. You'll be nudged on the next bank SMS."
-                                : "Tap Grant permissions. If the SMS option is greyed out, "
-                                  + "open app info → ⋮ → Allow restricted settings, then try again."));
-        findViewById(R.id.grant).setEnabled(!(sms && notif));
+        mark(icSms, sms);
+        mark(icNotif, notif);
+        mark(icTracker, tracker);
 
-        screenLabel.setText("A notification tap opens: " + TrackerLauncher.describeTarget(this));
+        hint.setText(sms && notif ? R.string.hint_ready : R.string.hint_grant);
+        findViewById(R.id.grant).setEnabled(!(sms && notif));
+        screenLabel.setText(getString(R.string.tap_opens, TrackerLauncher.describeTarget(this)));
     }
+
+    private void mark(ImageView icon, boolean ok) {
+        icon.setImageResource(ok ? R.drawable.ic_check : R.drawable.ic_cross);
+        icon.setImageTintList(ColorStateList.valueOf(getColor(ok ? R.color.good : R.color.bad)));
+    }
+
+    private boolean has(String permission) {
+        return checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private String versionName() {
+        try {
+            return getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+        } catch (PackageManager.NameNotFoundException e) {
+            return "";
+        }
+    }
+
+    private void openAppInfo() {
+        startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.fromParts("package", getPackageName(), null)));
+    }
+
+    // --- What a tap opens --------------------------------------------------
 
     /** Lets you pick what a notification tap opens in Spending Tracker. */
     private void pickScreen() {
         List<TrackerLauncher.Option> options = TrackerLauncher.options(this);
         if (options.isEmpty()) {
-            Toast.makeText(this, "Spending Tracker isn't installed, or it publishes "
-                    + "nothing another app may open, so only its main screen can be used.",
-                    Toast.LENGTH_LONG).show();
+            Toast.makeText(this, R.string.nothing_to_open, Toast.LENGTH_LONG).show();
             return;
         }
 
         String[] labels = new String[options.size() + 1];
-        labels[0] = "Open the app normally";
+        labels[0] = getString(R.string.pick_normally);
         for (int i = 0; i < options.size(); i++) {
             TrackerLauncher.Option o = options.get(i);
             // Say up front which ones Android will not let this app open.
-            labels[i + 1] = o.startable(this) == null ? o.label + "  (cannot open)" : o.label;
+            labels[i + 1] = o.startable(this) == null
+                    ? o.label + getString(R.string.cannot_open_suffix)
+                    : o.label;
         }
 
         new AlertDialog.Builder(this)
-                .setTitle("What should a tap open?")
+                .setTitle(R.string.pick_title)
                 .setItems(labels, (d, which) -> {
                     TrackerLauncher.Option chosen = which == 0 ? null : options.get(which - 1);
                     if (!TrackerLauncher.pin(this, chosen)) {
-                        Toast.makeText(this, chosen.label + " points at a screen Spending "
-                                + "Tracker keeps private. Only that app can open it.",
+                        Toast.makeText(this, getString(R.string.cannot_open, chosen.label),
                                 Toast.LENGTH_LONG).show();
                         return;
                     }
@@ -132,14 +149,29 @@ public class MainActivity extends Activity {
     /** Shows what Spending Tracker publishes and which parts we may open. */
     private void showDetails() {
         new AlertDialog.Builder(this)
-                .setTitle("What Spending Tracker publishes")
+                .setTitle(R.string.details_title)
                 .setMessage(TrackerLauncher.report(this))
-                .setPositiveButton("Close", null)
+                .setPositiveButton(R.string.close, null)
                 .show();
     }
 
-    private void openAppInfo() {
-        startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                Uri.fromParts("package", getPackageName(), null)));
+    // --- Parser tester -----------------------------------------------------
+
+    private void runTest(EditText input, TextView result) {
+        result.setVisibility(View.VISIBLE);
+        TxnParser.Txn txn = TxnParser.parse(null, input.getText().toString());
+
+        if (txn == null) {
+            result.setTextColor(getColor(R.color.bad));
+            result.setText(R.string.test_miss);
+            return;
+        }
+
+        result.setTextColor(getColor(R.color.text));
+        result.setText((txn.isDebit ? "Spent " : "Received ") + "₹" + txn.amountDisplay()
+                + "\nMerchant: " + (txn.merchant == null ? "-" : txn.merchant)
+                + "\nAccount: " + (txn.account == null ? "-" : "••" + txn.account)
+                + "\n\nA test notification was sent.");
+        Notifier.show(this, txn);
     }
 }
