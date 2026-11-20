@@ -13,7 +13,33 @@
     <string name="app_info">Open app info</string>
 
     <string name="section_nudges">Nudges</string>
-    <string name="notify_credits">Also notify for money received</string>
+    <string name="message_types">Message types and wordings</string>
+
+    <string name="rules_title">Message types</string>
+    <string name="rules_blurb">Spend Nudge reads an SMS by its wording. Banks word the same event differently, so if one of yours is missed, add its wording here. No rebuild needed.</string>
+    <string name="nudge_me_for">Nudge me for</string>
+    <string name="money_out">Money going out</string>
+    <string name="money_in">Money coming in</string>
+    <string name="words_debit">Means money went out</string>
+    <string name="words_debit_blurb">A message holding one of these counts as a spend.</string>
+    <string name="words_credit">Means money came in</string>
+    <string name="words_credit_blurb">A message holding one of these counts as income.</string>
+    <string name="words_ignore">Never a transaction</string>
+    <string name="words_ignore_blurb">A message holding one of these is skipped, whatever else it says. This is what keeps OTPs and bill reminders quiet.</string>
+    <string name="add_word">Add a wording</string>
+    <string name="add_debit">Add a spend wording</string>
+    <string name="add_credit">Add an income wording</string>
+    <string name="add_ignore">Add a wording to skip</string>
+    <string name="add_blurb">Matched whole and without regard to case, so "used" will not match "user".</string>
+    <string name="add_hint">for example: used at</string>
+    <string name="add">Add</string>
+    <string name="added">Added</string>
+    <string name="remove_word">Remove %1$s</string>
+    <string name="no_words">Empty, so nothing will be matched here.</string>
+    <string name="word_too_long">Too long. Use a short wording, not a whole message.</string>
+    <string name="reset">Reset to defaults</string>
+    <string name="reset_title">Reset the wordings?</string>
+    <string name="reset_blurb">Everything you added is removed, and everything you switched off comes back.</string>
     <string name="tap_opens">A notification tap opens %1$s.</string>
     <string name="pick_screen">Choose what a tap opens</string>
     <string name="show_details">What Spending Tracker publishes</string>

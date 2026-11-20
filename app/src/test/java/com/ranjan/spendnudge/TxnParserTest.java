@@ -8,6 +8,10 @@ import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 /**
  * JVM unit tests for the SMS parser. No Android framework involved, so these run
  * with ./gradlew test (no device or emulator needed).
@@ -61,6 +65,33 @@ public class TxnParserTest {
         assertTxn("AD-HDFCBK",
                 "Rs.1,299.00 spent on HDFC Bank Card x9876 at AMAZON PAY INDIA on 2026-11-17:10:32:11. Avl Lmt: Rs.85,000.00",
                 true, "1299", "AMAZON PAY INDIA", "9876");
+    }
+
+    @Test
+    public void hsbcCardUsedAt() {
+        // "used at" is the wording, and "for INR 228.00" must not land in the name.
+        assertTxn("AD-HSBCIN",
+                "HSBC Credit Card xx4805 used at CAS*SWIGGY for INR 228.00 on 21/11/26. "
+                        + "Avl limit INR 1002593.18; due INR 1406.82. "
+                        + "Call +914065118002 to report fraud.",
+                true, "228", "SWIGGY", "4805");
+    }
+
+    @Test
+    public void axisCardSpentAt() {
+        assertTxn("AD-AXISBK",
+                "Spent INR 2263.1 using Axis Bank Credit Card no. XX3602 on 15-11-26 15:18:48 "
+                        + "IST at BLINKIT ECO. Avl limit: INR 247736.9. "
+                        + "Not you? SMS BLOCK 3602 to +919951860002.",
+                true, "2263.10", "BLINKIT ECO", "3602");
+    }
+
+    @Test
+    public void cardNetworkPrefixIsStripped() {
+        assertEquals("BOOKMYSHOW", parsed("AD-HSBCIN",
+                "Card xx4805 used at PAYU*BOOKMYSHOW for INR 500.00 on 21/11/26").merchant);
+        assertEquals("SWIGGY", parsed("AD-HSBCIN",
+                "Card xx4805 used at CAS*SWIGGY for INR 228.00 on 21/11/26").merchant);
     }
 
     @Test
@@ -120,6 +151,69 @@ public class TxnParserTest {
     public void nonTransactionalBankSmsIsIgnored() {
         assertNull(TxnParser.parse("AX-HDFCBK",
                 "Dear Customer, your HDFC Bank statement for Oct 2026 is ready."));
+    }
+
+    // --- Editable wordings -------------------------------------------------
+
+    private static TxnParser.Rules rules(List<String> debit, List<String> credit,
+                                         List<String> ignore) {
+        return new TxnParser.Rules(debit, credit, ignore);
+    }
+
+    @Test
+    public void addedWordingIsMatched() {
+        TxnParser.Rules withSwiped = rules(
+                Arrays.asList("swiped"),
+                Arrays.asList(TxnParser.CREDIT_WORDS),
+                Arrays.asList(TxnParser.IGNORE_WORDS));
+        TxnParser.Txn t = TxnParser.parse("AX-HDFCBK",
+                "Card xx1234 swiped at FOODHALL for INR 10.00", withSwiped);
+        assertNotNull(t);
+        assertTrue(t.isDebit);
+        assertEquals("10", t.amountText());
+        assertEquals("FOODHALL", t.merchant);
+    }
+
+    @Test
+    public void removedWordingStopsMatching() {
+        TxnParser.Rules withoutSpent = rules(
+                Arrays.asList("debited"),
+                Arrays.asList(TxnParser.CREDIT_WORDS),
+                Arrays.asList(TxnParser.IGNORE_WORDS));
+        assertNull(TxnParser.parse("AX-HDFCBK", "Rs.450 spent at SWIGGY", withoutSpent));
+    }
+
+    @Test
+    public void emptyIgnoreListLetsEverythingThrough() {
+        TxnParser.Rules noIgnores = rules(
+                Arrays.asList(TxnParser.DEBIT_WORDS),
+                Arrays.asList(TxnParser.CREDIT_WORDS),
+                Collections.emptyList());
+        assertNotNull(TxnParser.parse("AX-HDFCBK",
+                "Your OTP for transaction of Rs 499 is 123456.", noIgnores));
+    }
+
+    @Test
+    public void aWordingIsNeverTreatedAsAPattern() {
+        // Typed by hand, so it must be matched literally, not compiled.
+        TxnParser.Rules odd = rules(
+                Arrays.asList("a.c(", "spent"),
+                Collections.emptyList(),
+                Collections.emptyList());
+        assertNotNull(TxnParser.parse("AX-HDFCBK", "Rs.50 spent at SHOP", odd));
+    }
+
+    @Test
+    public void nullRulesFallBackToTheDefaults() {
+        assertNotNull(TxnParser.parse("AX-HDFCBK", "Rs.50 spent at SHOP", null));
+    }
+
+    @Test
+    public void wordingsAreMatchedWhole() {
+        // "used" must not fire on "user", as in SBI's "Dear UPI user".
+        TxnParser.Rules onlyUsed = rules(
+                Arrays.asList("used"), Collections.emptyList(), Collections.emptyList());
+        assertNull(TxnParser.parse("VM-SBIUPI", "Dear UPI user A/C X4521 Rs.120", onlyUsed));
     }
 
     // --- Sender check ------------------------------------------------------

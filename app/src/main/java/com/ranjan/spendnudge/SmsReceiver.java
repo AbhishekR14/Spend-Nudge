@@ -27,9 +27,11 @@ public class SmsReceiver extends BroadcastReceiver {
             bySender.computeIfAbsent(sender, k -> new StringBuilder()).append(p.getMessageBody());
         }
 
+        TxnParser.Rules rules = Prefs.rules(context);
         for (Map.Entry<String, StringBuilder> e : bySender.entrySet()) {
-            TxnParser.Txn txn = TxnParser.parse(e.getKey(), e.getValue().toString());
+            TxnParser.Txn txn = TxnParser.parse(e.getKey(), e.getValue().toString(), rules);
             if (txn == null) continue;
+            if (txn.isDebit && !Prefs.notifyDebits(context)) continue;
             if (!txn.isDebit && !Prefs.notifyCredits(context)) continue;
             Notifier.show(context, txn);
         }

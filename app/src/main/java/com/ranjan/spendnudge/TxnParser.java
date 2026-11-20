@@ -1,6 +1,11 @@
 package com.ranjan.spendnudge;
 
 import java.text.NumberFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -54,18 +59,74 @@ public final class TxnParser {
     // Messages from normal phone numbers are ignored.
     private static final Pattern BANK_SENDER = Pattern.compile("^[A-Z]{2}-[A-Z0-9]{3,9}(-[A-Z])?$", CI);
 
-    // Things that look like transactions but aren't.
-    private static final Pattern IGNORE = Pattern.compile(
-            "\\bOTP\\b|one[ -]?time password|verification code"
-            + "|will be debited|to be debited|is due|due date|due on|min(imum)? amt due|total amt due"
-            + "|requested money|has requested|collect request|payment request"
-            + "|pre-?approved|\\boffer\\b|\\bloan of\\b|cashback of up to|apply now"
-            + "|failed|declined|reversed|\\bauto ?pay (is )?set", CI);
+    /** Wordings that mean money went out. Editable in the app. */
+    public static final String[] DEBIT_WORDS = {
+            "debited", "spent", "paid", "sent", "withdrawn", "purchase", "deducted",
+            "used", "txn of", "transaction of",
+    };
 
-    private static final Pattern DEBIT = Pattern.compile(
-            "\\b(debited|spent|paid|sent|withdrawn|purchase|deducted|txn of|transaction of)\\b", CI);
-    private static final Pattern CREDIT = Pattern.compile(
-            "\\b(credited|received|deposited|refund(ed)?)\\b", CI);
+    /** Wordings that mean money came in. Editable in the app. */
+    public static final String[] CREDIT_WORDS = {
+            "credited", "received", "deposited", "refund", "refunded",
+    };
+
+    /** Wordings that look like a transaction but are not one. Editable in the app. */
+    public static final String[] IGNORE_WORDS = {
+            "OTP", "one time password", "one-time password", "verification code",
+            "will be debited", "to be debited", "is due", "due date", "due on",
+            "min amt due", "minimum amt due", "total amt due",
+            "requested money", "has requested", "collect request", "payment request",
+            "pre-approved", "preapproved", "offer", "loan of", "cashback of up to",
+            "apply now", "failed", "declined", "reversed",
+            "autopay set", "auto pay set", "autopay is set", "auto pay is set",
+    };
+
+    /**
+     * The wordings in force when a message is read. Built from the defaults
+     * above plus whatever you added or removed on the Message types screen.
+     * Each word is matched whole and without regard to case.
+     */
+    public static final class Rules {
+        private final List<String> debit;
+        private final List<String> credit;
+        private final List<String> ignore;
+        private final Pattern debitPattern;
+        private final Pattern creditPattern;
+        private final Pattern ignorePattern;
+
+        public Rules(Collection<String> debit, Collection<String> credit, Collection<String> ignore) {
+            this.debit = new ArrayList<>(debit);
+            this.credit = new ArrayList<>(credit);
+            this.ignore = new ArrayList<>(ignore);
+            this.debitPattern = compile(this.debit);
+            this.creditPattern = compile(this.credit);
+            this.ignorePattern = compile(this.ignore);
+        }
+
+        public static Rules defaults() {
+            return new Rules(Arrays.asList(DEBIT_WORDS),
+                    Arrays.asList(CREDIT_WORDS), Arrays.asList(IGNORE_WORDS));
+        }
+
+        public List<String> debitWords() { return Collections.unmodifiableList(debit); }
+
+        public List<String> creditWords() { return Collections.unmodifiableList(credit); }
+
+        public List<String> ignoreWords() { return Collections.unmodifiableList(ignore); }
+
+        /** One alternation of quoted words, so a word can never be read as a pattern. */
+        private static Pattern compile(List<String> words) {
+            StringBuilder sb = new StringBuilder();
+            for (String word : words) {
+                if (word == null) continue;
+                String trimmed = word.trim();
+                if (trimmed.isEmpty()) continue;
+                if (sb.length() > 0) sb.append('|');
+                sb.append(Pattern.quote(trimmed));
+            }
+            return sb.length() == 0 ? null : Pattern.compile("\\b(?:" + sb + ")\\b", CI);
+        }
+    }
 
     private static final String NUM = "([0-9][0-9,]*(?:\\.[0-9]{1,2})?)";
 
@@ -80,9 +141,12 @@ public final class TxnParser {
             Pattern.compile("\\bInfo:\\s*(?:UPI-)?([^-.]+)", CI),
             Pattern.compile("\\bby\\s+UPI-(.+?)(?:\\.\\s|\\s+Avl|\\s+Ref|$)", CI),
             Pattern.compile("\\btrf to\\s+(.+?)(?:\\s+Ref|\\s+on\\b|\\.|$)", CI),
-            Pattern.compile("\\bat\\s+(.+?)(?:\\s+on\\b|\\s+Avl|\\.\\s|$)", CI),
+            // "for Rs" ends the name: card messages read "at MERCHANT for INR 228.00".
+            Pattern.compile("\\bat\\s+(.+?)"
+                    + "(?:\\s+on\\b|\\s+for\\s+(?:Rs\\.?|INR|₹)|\\s+Avl|\\.\\s|$)", CI),
             Pattern.compile(";\\s*(.+?)\\s+credited", CI),
-            Pattern.compile("\\bto\\s+(?!a/?c|your|you\\b)(.+?)(?:\\s+on\\b|\\s+via\\b|\\s+Ref|\\s+UPI|\\.\\s|$)", CI),
+            Pattern.compile("\\bto\\s+(?!a/?c|your|you\\b|report\\b)(.+?)"
+                    + "(?:\\s+on\\b|\\s+via\\b|\\s+Ref|\\s+UPI|\\.\\s|$)", CI),
             Pattern.compile("\\bfrom\\s+(?!a/?c|your|HDFC|ICICI|SBI|Axis|Kotak)(.+?)(?:\\s+on\\b|\\s+Ref|\\s+UPI|\\.\\s|$)", CI),
     };
 
@@ -100,18 +164,22 @@ public final class TxnParser {
 
     /** @param sender pass null to skip the sender check (used by the in-app tester). */
     public static Txn parse(String sender, String body) {
+        return parse(sender, body, Rules.defaults());
+    }
+
+    /** @param rules the wordings in force, or null for the built-in ones. */
+    public static Txn parse(String sender, String body, Rules rules) {
         if (body == null) return null;
         if (sender != null && !looksLikeBank(sender)) return null;
+        if (rules == null) rules = Rules.defaults();
 
         String text = body.replaceAll("\\s+", " ").trim();
-        if (IGNORE.matcher(text).find()) return null;
+        if (rules.ignorePattern != null && rules.ignorePattern.matcher(text).find()) return null;
 
-        // Debit or credit: whichever keyword appears first wins
+        // Debit or credit: whichever wording appears first wins
         // (ICICI writes "debited for Rs 450; SWIGGY credited", which is a debit).
-        Matcher d = DEBIT.matcher(text);
-        Matcher c = CREDIT.matcher(text);
-        int dPos = d.find() ? d.start() : Integer.MAX_VALUE;
-        int cPos = c.find() ? c.start() : Integer.MAX_VALUE;
+        int dPos = firstMatch(rules.debitPattern, text);
+        int cPos = firstMatch(rules.creditPattern, text);
         if (dPos == Integer.MAX_VALUE && cPos == Integer.MAX_VALUE) return null;
         boolean isDebit = dPos < cPos;
 
@@ -119,6 +187,12 @@ public final class TxnParser {
         if (amount == null || amount <= 0) return null;
 
         return new Txn(amount, isDebit, findMerchant(text), findAccount(text));
+    }
+
+    private static int firstMatch(Pattern pattern, String text) {
+        if (pattern == null) return Integer.MAX_VALUE;
+        Matcher m = pattern.matcher(text);
+        return m.find() ? m.start() : Integer.MAX_VALUE;
     }
 
     private static Double firstAmount(String text) {
@@ -145,6 +219,9 @@ public final class TxnParser {
             Matcher m = p.matcher(text);
             if (m.find()) {
                 String s = m.group(1).trim();
+                // Card networks prefix the name, as in "CAS*SWIGGY" or "PAYU*BOOKMY".
+                s = s.replaceFirst("^[A-Za-z0-9]{2,6}\\*", "").trim();
+                s = s.replaceAll("[\\s.,;:]+$", "");
                 if (s.length() > 40) s = s.substring(0, 40).trim() + "…";
                 if (!s.isEmpty() && !s.matches("(?i).*\\b(rs|inr)\\b.*")) return s;
             }

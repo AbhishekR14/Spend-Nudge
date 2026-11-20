@@ -37,6 +37,10 @@ Nothing else runs. There is no service, no polling and no network access.
 - **Offline by construction.** No `INTERNET` permission, so nothing can leave
   the phone even by accident.
 - **Credits are optional.** Money received can nudge you too, or stay quiet.
+- **Editable wordings.** Banks word the same event differently. The
+  **Message types** screen lists every wording that marks a message as a spend,
+  as income, or as one to skip, and you can add or remove any of them on the
+  phone. No rebuild needed.
 - **Built in tester.** Paste a real SMS on the main screen and see exactly what
   the parser makes of it before trusting it.
 - **No third party code.** Plain Java and the Android framework. JUnit is test
@@ -89,13 +93,35 @@ Covered by `TxnParserTest`, which runs on every build.
 | `BZ-AXISBK` | INR 5,000.00 credited to A/c no. XX7788 by UPI-RAHUL SHARMA. Avl Bal INR 23,456.78 | credit 5000, RAHUL SHARMA, 7788 |
 | `JM-KOTAKB` | Received Rs.2000.00 in your Kotak Bank A/c X5566 from priya@okaxis | credit 2000, priya@okaxis, 5566 |
 | `AX-HDFCBK` | Update! INR 2,100.00 debited from HDFC Bank XX1234. Info: UPI-BIGBASKET-bigbasket@hdfcbank | debit 2100, BIGBASKET, 1234 |
+| `AD-HSBCIN` | HSBC Credit Card xx4805 used at CAS*SWIGGY for INR 228.00 on 21/11/26. Avl limit INR 1002593.18 | debit 228, SWIGGY, 4805 |
 
 Deliberately ignored: OTPs, scheduled debits ("will be debited"), bill reminders
 ("is due"), payment requests, failed or reversed transactions, and anything from
 a plain phone number rather than a bank's sender ID.
 
 An amount later in the message, such as `Avl Bal`, is never mistaken for the
-transaction, and `debited ... ; MERCHANT credited` is read as a debit.
+transaction, `debited ... ; MERCHANT credited` is read as a debit, and a card
+network prefix is dropped, so `CAS*SWIGGY` is recorded as `SWIGGY`.
+
+**If your bank is missed,** open **Message types and wordings** in the app and
+add the wording. See below.
+
+## Message types
+
+A bank SMS is classified by the wordings it contains, and the app shows you the
+lists it uses.
+
+| List | Meaning | Defaults include |
+|---|---|---|
+| Money went out | counts as a spend | `debited`, `spent`, `paid`, `used`, `withdrawn` |
+| Money came in | counts as income | `credited`, `received`, `deposited`, `refund` |
+| Never a transaction | skipped whatever else it says | `OTP`, `is due`, `will be debited`, `failed` |
+
+Open **Message types and wordings** on the main screen to add a wording, remove
+one, or switch spends and income on and off separately. Wordings are matched
+whole and without regard to case, so `used` never fires on `user`, and a wording
+you type is always matched literally rather than as a pattern. **Reset to
+defaults** appears once you have changed anything.
 
 ## Permissions and privacy
 

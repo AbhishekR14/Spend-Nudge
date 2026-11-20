@@ -15,6 +15,12 @@
         <item name="android:windowLightNavigationBar">true</item>
     </style>
 
+    <!-- The main screen draws its own heading, so it needs no action bar. -->
+    <style name="AppTheme.NoBar" parent="AppTheme">
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
+
     <style name="Card">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>

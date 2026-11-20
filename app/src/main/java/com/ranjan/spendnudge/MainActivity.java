@@ -12,7 +12,6 @@ import android.provider.Settings;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageView;
-import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -49,9 +48,8 @@ public class MainActivity extends Activity {
         findViewById(R.id.pickScreen).setOnClickListener(v -> pickScreen());
         findViewById(R.id.showDetails).setOnClickListener(v -> showDetails());
 
-        Switch credits = findViewById(R.id.credits);
-        credits.setChecked(Prefs.notifyCredits(this));
-        credits.setOnCheckedChangeListener((b, on) -> Prefs.setNotifyCredits(this, on));
+        findViewById(R.id.messageTypes).setOnClickListener(
+                v -> startActivity(new Intent(this, RulesActivity.class)));
 
         EditText input = findViewById(R.id.testInput);
         TextView result = findViewById(R.id.testResult);
@@ -159,7 +157,8 @@ public class MainActivity extends Activity {
 
     private void runTest(EditText input, TextView result) {
         result.setVisibility(View.VISIBLE);
-        TxnParser.Txn txn = TxnParser.parse(null, input.getText().toString());
+        // Uses your wordings, so the tester agrees with what a real SMS would do.
+        TxnParser.Txn txn = TxnParser.parse(null, input.getText().toString(), Prefs.rules(this));
 
         if (txn == null) {
             result.setTextColor(getColor(R.color.bad));

@@ -101,27 +101,11 @@
                 style="@style/SectionTitle"
                 android:text="@string/section_nudges" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:paddingEnd="12dp"
-                    android:paddingStart="0dp"
-                    android:text="@string/notify_credits"
-                    android:textColor="@color/text"
-                    android:textSize="16sp" />
-
-                <Switch
-                    android:id="@+id/credits"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" />
-            </LinearLayout>
+            <Button
+                android:id="@+id/messageTypes"
+                style="@style/SecondaryButton"
+                android:layout_marginTop="0dp"
+                android:text="@string/message_types" />
 
             <View style="@style/Divider" />
 
